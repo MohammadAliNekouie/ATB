@@ -1,0 +1,171 @@
+$regfile = "m2560def.dat"
+$crystal = 1000000
+
+'$lib "glcdKS108.lib"
+'Wait 2
+Config Timer1 = Timer , Prescale = 1
+Config Timer4 = Pwm , Pwm = 8 , Compare A Pwm = Clear Up , Compare B Pwm = Clear Down , Prescale = 1024
+Config Lcdpin = Pin , Db4 = Porta.4 , Db5 = Porta.5 , Db6 = Porta.6 , Db7 = Porta.7 , E = Portg.2 , Rs = Portj.6
+'Config Graphlcd = 128 * 64sed , Dataport = Porta , Controlport = Portj , Ce = 7 , Ce2 = Porth.2 , Cd = 6 , Rd = 5 , Reset = 3 , Enable = 4
+Config Portb = Output
+Config Porth = Output
+Config Portg = Output
+Config Portd = Output
+Config Porte = Output
+Config Portf = Output
+Config Portc = Output
+
+Declare Sub Turn()
+Dim 7seg_value As Byte , Location As Byte
+Dim Step_value As Byte
+Dim X As Integer , N As Integer
+Dim Dot_matrix As Byte
+
+Led_white Alias Portb.4
+Led_green Alias Portb.5
+Led_red Alias Portb.6
+Led_pink Alias Porth.7
+
+Dcm_en_pwm Alias Portb.7
+Dcm_in_1 Alias Portg.3
+Dcm_in_2 Alias Portg.4
+
+Sem_con Alias Porth.4
+
+Stm_in_1 Alias Portg.1
+Stm_in_2 Alias Portg.0
+Stm_in_3 Alias Portd.7
+Stm_in_4 Alias Portd.6
+
+7seg_a0 Alias Porte.4
+7seg_a1 Alias Porte.3
+7seg_a2 Alias Porte.2
+7seg_a3 Alias Porte.1
+7seg_dot Alias Porte.0
+7seg_rst Alias Portf.5
+7seg_clk Alias Portf.4
+
+Dm_rst Alias Portd.5
+Dm_clk Alias Portd.4
+Row Alias Portc
+Enable Interrupts
+Enable Timer1
+On Timer1 7seg
+Timer1 = 155
+Start Timer1
+Do
+Cls
+Locate 1 , 4
+Lcd "HELLO MAN"
+
+Do
+toggle port
+Loop
+
+Toggle Led_white
+Toggle Led_green
+Toggle Led_red
+Toggle Led_pink
+Wait 1
+Reset Dcm_in_1
+Set Dcm_in_2
+Set Dcm_en_pwm
+Wait 1
+Reset Dcm_in_1
+Reset Dcm_in_2
+Set Dcm_en_pwm
+Start Timer4
+Pwm4b = 1
+Wait 1
+Set Dcm_in_1
+Reset Dcm_in_2
+Set Dcm_en_pwm
+Wait 1
+Pwm4b = 10
+Wait 1
+Pwm4b = 0
+Reset Dcm_in_1
+Reset Dcm_in_2
+Reset Dcm_en_pwm
+
+For N = 1 To 10
+   Step_value = &H01
+   For X = 1 To 4
+      Rotate Step_value , Left
+      Turn
+      Waitms 100
+   Next
+Next
+Wait 1
+For N = 1 To 10
+   Step_value = &H08
+   For X = 1 To 4
+      Rotate Step_value , Right
+      Turn
+      Waitms 100
+   Next
+Next
+Step_value = 0
+Turn
+
+For N = 1 To 100
+   Pwm0b = N
+   Waitus 100
+Next
+Pwm0b = 0
+
+Incr 7seg_value
+If 7seg_value > 10 Then 7seg_value = 0
+
+
+
+Loop
+
+Sub Turn()
+   Stm_in_1 = Step_value.0
+   Stm_in_2 = Step_value.2
+   Stm_in_3 = Step_value.1
+   Stm_in_4 = Step_value.3
+End Sub
+
+'  $include "font8x8.font"
+
+7seg:
+   Stop Timer1
+   Timer1 = 63055
+   Start Timer1
+
+
+   7seg_a0 = 7seg_value.0
+   7seg_a1 = 7seg_value.1
+   7seg_a2 = 7seg_value.2
+   7seg_a3 = 7seg_value.3
+   Incr Location
+   If Location > 6 Then
+      Location = 0
+      Set 7seg_rst
+      Waitus 100
+      Reset 7seg_rst
+
+   End If
+   7seg_value = 7
+   Toggle 7seg_clk
+   Waitus 100
+   Toggle 7seg_clk
+
+   Incr Dot_matrix
+   If Dot_matrix > 8 Then
+      Dot_matrix = 0
+      Set Dm_rst
+      Waitus 100
+      Reset Dm_rst
+   End If
+   Row = Lookup(dot_matrix , A)
+   Toggle Dm_clk
+   Waitus 100
+   Toggle Dm_clk
+Return
+
+
+A:
+Data 31 , 63 , 120 , 216 , 120 , 63 , 31 , 0 , 0
