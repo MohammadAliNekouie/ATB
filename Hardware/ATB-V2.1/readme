@@ -1,1 +1,3 @@
-
+Hardware Version V2.1
+- changes:
+Display control ports moved to one port for IDE compatibility
